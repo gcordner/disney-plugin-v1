@@ -1,10 +1,10 @@
 <?php
 /**
  * Plugin Name:     Disney Practical Plugin V1
- * Plugin URI:      PLUGIN SITE HERE
+ * Plugin URI:      https://github.com/gcordner/disney-plugin-v1
  * Description:     A plugin to show or hide the author and add custom post meta.
- * Author:          YOUR NAME HERE
- * Author URI:      YOUR SITE HERE
+ * Author:          Geoff Cordner
+ * Author URI:      https://geoffcordner.net
  * Text Domain:     disney-practical-plugin-v1
  * Domain Path:     /languages
  * Version:         0.1.0
@@ -20,7 +20,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Add settings page to the admin menu.
  */
 function sha_add_settings_page() {
-	add_options_page( 'Show/Hide Author', 'Show/Hide Author', 'manage_options', 'sha-settings', 'sha_render_settings_page' );
+	add_options_page(
+		__( 'Show/Hide Author', 'disney-practical-plugin-v1' ),
+		__( 'Show/Hide Author', 'disney-practical-plugin-v1' ),
+		'manage_options',
+		'sha-settings',
+		'sha_render_settings_page'
+	);
 }
 add_action( 'admin_menu', 'sha_add_settings_page' );
 
@@ -30,7 +36,7 @@ add_action( 'admin_menu', 'sha_add_settings_page' );
 function sha_render_settings_page() {
 	?>
 	<div class="wrap">
-		<h1>Show/Hide Author Settings</h1>
+		<h1><?php esc_html_e( 'Show/Hide Author Settings', 'disney-practical-plugin-v1' ); ?></h1>
 		<form method="post" action="options.php">
 			<?php
 			settings_fields( 'sha-settings-group' );
@@ -38,7 +44,7 @@ function sha_render_settings_page() {
 			?>
 			<table class="form-table">
 				<tr valign="top">
-					<th scope="row">Hide Author on Posts</th>
+					<th scope="row"><?php esc_html_e( 'Hide Author on Posts', 'disney-practical-plugin-v1' ); ?></th>
 					<td><input type="checkbox" name="sha_hide_author" value="1" <?php checked( 1, get_option( 'sha_hide_author' ), true ); ?> /></td>
 				</tr>
 			</table>
@@ -57,41 +63,6 @@ function sha_register_settings() {
 add_action( 'admin_init', 'sha_register_settings' );
 
 /**
- * Enqueue inline debugging script to output console log based on the 'sha_hide_author' option value.
- */
-function sha_enqueue_inline_script() {
-	$sha_hide_author = get_option( 'sha_hide_author', 0 ); // Default to 0 if option is not set.
-
-	// Register a dummy script to add inline JS to.
-	wp_register_script( 'sha-inline-js', '' );
-
-	// Enqueue the script.
-	wp_enqueue_script( 'sha-inline-js' );
-
-	// Pass the PHP value to JavaScript.
-	wp_localize_script(
-		'sha-inline-js',
-		'shaOptions',
-		array(
-			'hideAuthor' => $sha_hide_author,
-		)
-	);
-
-	// Add the inline script.
-	wp_add_inline_script(
-		'sha-inline-js',
-		"
-		if ( shaOptions.hideAuthor == 1 ) {
-			console.log('author off');
-		} else {
-			console.log('author on');
-		}
-	"
-	);
-}
-add_action( 'wp_enqueue_scripts', 'sha_enqueue_inline_script' );
-
-/**
  * Remove the entire post-meta template part.
  *
  * @param string $block_content The block content.
@@ -100,7 +71,9 @@ add_action( 'wp_enqueue_scripts', 'sha_enqueue_inline_script' );
  */
 function sha_remove_post_meta_template_part( $block_content, $block ) {
 	// Check if the block being rendered is the post-meta template part.
-	if ( isset( $block['blockName'] ) && 'core/template-part' === $block['blockName'] && isset( $block['attrs']['slug'] ) && 'post-meta' === $block['attrs']['slug'] ) {
+	if ( isset( $block['blockName'], $block['attrs']['slug'] )
+		&& 'core/template-part' === $block['blockName']
+		&& 'post-meta' === $block['attrs']['slug'] ) {
 		return ''; // Remove the block entirely by returning an empty string.
 	}
 
@@ -108,45 +81,48 @@ function sha_remove_post_meta_template_part( $block_content, $block ) {
 	return $block_content;
 }
 
-
 /**
  * Add a new custom post-meta block group to replace the old one, excluding the author.
  *
  * @param string $block_content The block content.
  * @param array  $block The block data.
- * @return string The modified block content with the new post meta.
+ * @return string The modified block content with the new post meta, excluding the author.
  */
 function sha_add_custom_post_meta_in_place( $block_content, $block ) {
-	$sha_hide_author = get_option( 'sha_hide_author', 0 ); // Get toggle value.
-
 	// Check if the block being rendered is the post-meta template part.
-	if ( isset( $block['blockName'] ) && 'core/template-part' === $block['blockName'] && isset( $block['attrs']['slug'] ) && 'post-meta' === $block['attrs']['slug'] ) {
-		// Build the new post-meta section, excluding the author if toggled off.
-		$new_post_meta = '
-            <div class="wp-block-template-part">
-                <div class="wp-block-group has-global-padding is-layout-constrained wp-block-group-is-layout-constrained">
-                    <div class="wp-block-group is-content-justification-left is-layout-flex wp-container-core-group-is-layout-6 wp-block-group-is-layout-flex">
-                        <div class="wp-block-post-date">
-                            <time datetime="' . get_the_date( DATE_W3C ) . '">
-                                <a href="' . get_permalink() . '">' . get_the_date( __( 'M d, Y' ) ) . '</a>
-                            </time>
-                        </div>
-                        ' . ( '1' === $sha_hide_author ? '' : '' ) . ' <!-- Author omitted -->
-                        <div class="taxonomy-category wp-block-post-terms">
-                            <span class="wp-block-post-terms__prefix">in </span>' . get_the_category_list( ', ' ) . '
-                        </div>
-                    </div>
-                </div>
-            </div>
-        ';
+	if ( isset( $block['blockName'], $block['attrs']['slug'] )
+		&& 'core/template-part' === $block['blockName']
+		&& 'post-meta' === $block['attrs']['slug'] ) {
+		// Build the new post-meta section, excluding the author.
+		$new_post_meta = sprintf(
+			'<div class="wp-block-template-part">
+				<div class="wp-block-group has-global-padding is-layout-constrained wp-block-group-is-layout-constrained">
+					<div class="wp-block-group is-content-justification-left is-layout-flex wp-container-core-group-is-layout-6 wp-block-group-is-layout-flex">
+						<div class="wp-block-post-date">
+							<time datetime="%1$s">
+								<a href="%2$s">%3$s</a>
+							</time>
+						</div>
+						<div class="taxonomy-category wp-block-post-terms">
+							<span class="wp-block-post-terms__prefix">%4$s</span>%5$s
+						</div>
+					</div>
+				</div>
+			</div>',
+			esc_attr( get_the_date( DATE_W3C ) ),
+			esc_url( get_permalink() ),
+			esc_html( get_the_date( __( 'M d, Y', 'disney-practical-plugin-v1' ) ) ),
+			esc_html__( 'in ', 'disney-practical-plugin-v1' ),
+			get_the_category_list( ', ' )
+		);
 
-		// Return the custom post meta to replace the default one.
+		// Return the custom post meta to replace the default one, excluding the author.
 		return $new_post_meta;
 	}
 
+	// Return the original block content if the block is not the post-meta template part.
 	return $block_content;
 }
-
 
 /**
  * Conditionally run the functions to remove and replace the post meta template part.
